@@ -1,0 +1,240 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!--https://www.elegantthemes.com/blog/resources/elegant-icon-font-->
+<head>
+    <title>Geometria</title>
+    <meta charset="utf-8" />
+    <link href="https://fonts.googleapis.com/css?family=Bungee|Quicksand" rel="stylesheet">
+    <script src="lib/three.js"></script>
+    <script src="lib/orbit.js"></script>
+    <script src="lib/Stats.js"></script>
+    <script src="lib/gui.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+            font-family: 'Quicksand', sans-serif;
+            overflow: hidden;
+            height: 100%;
+            height: 100vh;
+        }
+        #render {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;   
+        }
+        #niechaj{
+            position: fixed;
+            bottom: 1vmin;
+            left: 2.5vmin;
+            color: white;
+            font-size: 2vmin;
+            font-family: 'Bungee', cursive;
+            z-index: 12;
+            word-spacing: 1vmin;
+        }
+    </style>
+    <script>
+            var scene,
+                camera,
+                //obj = levelData.getLevelData(),
+                szerokosc,
+                wysokosc,
+                renderer,
+                mouseVector,
+                raycaster,
+                axis,
+                //shadow,
+                ambientLight,
+                //player,
+                //clock,
+                stats,
+                fireEl = [],
+                materials = [],
+                size = 70,
+                parameters =
+                {
+                    width:  95, // numeric
+                    height: 475, // numeric slider
+                    speed:  30,
+                    shake:  11,
+                    color:  "#ff6600"
+                },
+                controls   //ruszanie myszką
+            function camera_update() {
+                camera.updateProjectionMatrix()
+            }
+            function animateFire() {
+                for (var i in fireEl) {
+                    var widthMin = parameters.width / 19,
+                        heightMin = parameters.height / 5,
+                        speedMin = 4,
+                        shake = parameters.shake + 1,
+                        shakeMin = (parameters.shake - 1) / 2,
+                    size = Math.floor(Math.random() * parameters.width + widthMin)
+                    var celling = Math.floor(Math.random() * parameters.height + heightMin),
+                        x = 0,
+                        y = 0,
+                        z = 0
+                    if (fireEl[i].position.y > celling) {
+                        var pt_angle = Math.random() * 2 * Math.PI,
+                            pt_radius_sq = Math.random() * size*size,
+                            pt_x = Math.sqrt(pt_radius_sq) * Math.cos(pt_angle),
+                            pt_z = Math.sqrt(pt_radius_sq) * Math.sin(pt_angle)
+                        x = (pt_x + 100 / 2) - 50
+                        z = (pt_z + 100 / 2) - 50
+                        y = 6
+                        materials[i].opacity = 0.5
+                    } else {
+                        y = fireEl[i].position.y + Math.floor(Math.random() * parameters.speed) + 4
+                        x = fireEl[i].position.x + Math.floor(Math.random() * shake) - shakeMin
+                        z = fireEl[i].position.z + Math.floor(Math.random() * shake) - shakeMin
+                        materials[i].opacity = (5 - Math.floor((fireEl[i].position.y / celling) * 5)) / 10
+                    }
+                    fireEl[i].position.set(x, y, z)
+                }
+            }
+            function animateScene() {
+                stats.begin();
+                requestAnimationFrame(animateScene);
+                animateFire()
+                renderer.render(scene, camera);
+                stats.end();
+            }
+            function createFire() {
+                for (var i = 0; i < 250; i++) {
+                    var material,
+                        geometry,
+                        fireMesh,
+                        lightMesh,
+                        group;
+
+                    materials.push(new THREE.MeshBasicMaterial({
+                        color: 0xff6600,
+                        transparent: true,
+                        opacity: 0.5,
+                        depthWrite: false,
+                        blending: THREE.AdditiveBlending // kluczowy element zapewniający mieszanie kolorów poszczególnych cząsteczek
+                    }));
+                    //group = new THREE.Object3D()
+                    geometry = new THREE.BoxGeometry(2, 2, 2),
+                    fireMesh = new THREE.Mesh(geometry, materials[i])
+                    fireMesh.name = "fire"
+                    scale = (Math.random() * 6 + 1)
+                    fireMesh.scale.set(scale, scale, scale)
+                    var pt_angle = Math.random() * 2 * Math.PI,
+                        pt_radius_sq = Math.random() * size*size,
+                        pt_x = Math.sqrt(pt_radius_sq) * Math.cos(pt_angle),
+                        pt_z = Math.sqrt(pt_radius_sq) * Math.sin(pt_angle),
+                        x = (pt_x + 100 / 2) - 50,
+                        z = (pt_z + 100 / 2) - 50,
+                        y = (Math.random() * 70 - 140)
+                    fireMesh.position.set(x,y,z) 
+                    fireEl.push(fireMesh)
+                    scene.add(fireMesh)
+                }
+            }
+            function createPlane() {
+                var materials,
+                    geometry,
+                    mesh
+                geometry = new THREE.PlaneBufferGeometry(2500, 2500),
+                materials = new THREE.MeshPhongMaterial({
+                    specular: 0xffffff, shininess: 0,
+                    side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture('img/texture.jpg')
+                }),
+                mesh = new THREE.Mesh(geometry, materials)
+                mesh.rotateX(Math.PI / 2);
+                //mesh.rotateY(Math.PI/90); 
+                //mesh.rotateZ(Math.PI/90); 
+                mesh.material.map.repeat.set(5, 5); //gęstość powtarzania
+                mesh.material.map.wrapS = mesh.material.map.wrapT = THREE.RepeatWrapping; // powtarzanie w obu kierunkach
+                scene.add(mesh);
+            }
+            function createRender() {
+                szerokosc = window.innerWidth
+                wysokosc = window.innerHeight
+                scene = new THREE.Scene()
+                camera = new THREE.PerspectiveCamera(
+                    45, // kąt patrzenia kamery (FOV - field of view)
+                    szerokosc / wysokosc, // proporcje widoku, powinny odpowiadać proporjom naszego ekranu przeglądarki
+                    0.1, // minimalna renderowana odległość
+                    10000 // maxymalna renderowana odległość
+                )
+                renderer = new THREE.WebGLRenderer();
+                raycaster = new THREE.Raycaster() // obiekt symulujący "rzucanie" promieni
+                mouseVector = new THREE.Vector2() // wektor (x,y) wykorzystany będzie do określenie pozycji myszy na ekranie
+                axis = new THREE.AxisHelper(750)
+                axis.material.opacity = 0.2
+                controls = new THREE.OrbitControls(camera)
+
+                //clock = new THREE.Clock();
+                renderer.setClearColor(0x282626);
+                renderer.setSize(szerokosc, wysokosc);
+                document.getElementById("render").appendChild(renderer.domElement);
+                ambientLight = new THREE.AmbientLight(0xffffff, 0.262); // soft white light
+                scene.add(ambientLight)
+                scene.add(camera)
+                //scene.add(axis);
+                camera.position.x = 750
+                camera.position.y = 500
+                camera.position.z = 750
+                camera.lookAt(scene.position);
+
+                window.addEventListener('resize', function (event) {
+                    camera.aspect = window.innerWidth / window.innerHeight
+                    // notify the renderer of the size change
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    // update the camera
+                    camera.left = -window.innerWidth / 4.5;
+                    camera.right = window.innerWidth / 4.5;
+                    camera.top = window.innerHeight / 4.5;
+                    camera.bottom = -window.innerHeight / 4.5;
+                    camera_update()
+                })
+                //window.addEventListener("mouseup", camerapos, false);
+                stats = new Stats();
+                stats.showPanel(0);
+                stats.domElement.style.position = 'absolute';
+                stats.domElement.style.zIndex = 100;
+                document.body.appendChild(stats.dom);
+                animateScene()
+                controls.update()   //ruszanie myszką
+            }
+            function createGui() {
+                var gui = new dat.GUI();
+                var folder1 = gui.addFolder('Ognisko');
+                folder1.add(parameters, 'width').min(19).max(190).step(19).name('Szerokość').onChange(function(value) 
+                {   parameters.width = value;   });
+                folder1.add(parameters, 'height').min(225).max(1500).step(25).name('Wysokość').onChange(function (value)
+                { parameters.height = value; });
+                folder1.add(parameters, 'speed').min(9).max(100).step(1).name('Prędkość').onChange(function (value)
+                { parameters.speed = value; });
+                folder1.add(parameters, 'shake').min(3).max(17).step(2).name('Dynamika').onChange(function (value)
+                { parameters.shake = value; });
+                folder1.close();
+                gui.addColor(parameters, 'color').name('Kolor')
+                    .onChange(function (value)
+                {
+                    for (var i in fireEl ) {
+                        fireEl[i].material.color.setHex(value.replace("#", "0x"));
+                    }
+                });
+                gui.open();
+            }
+            function init() {
+                createRender()
+                createGui()
+                createPlane()
+                createFire()
+            }
+    </script>
+</head>
+<body onLoad="init()">
+    <div id="pojemnik">
+        <section id="render"></section>
+    </div>
+    <span id="niechaj">Niechaj 2017</span>
+</body>
+</html>
